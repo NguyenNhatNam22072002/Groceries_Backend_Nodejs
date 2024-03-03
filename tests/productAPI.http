@@ -1,0 +1,10 @@
+### test product detail api
+POST http://localhost:4200/api/app/product_detail
+Content-Type: application/x-www-form-urlencoded
+
+
+{
+	"key": "prod_id",
+									"value": "5",
+									"type": "default"
+}
