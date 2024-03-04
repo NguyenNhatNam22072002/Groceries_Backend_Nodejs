@@ -273,6 +273,10 @@ module.exports.controller = (app, io, socket_list) => {
       helper.Dlog(req.body);
       var searchObj = req.body;
 
+      // Extracting minprice and maxprice from request body
+      var minprice = searchObj.minprice || 0; // default to 0 if not provided
+      var maxprice = searchObj.maxprice || 100; // default to max integer if not provided
+
       // Assuming your search criteria are sent in the request body
       var searchQuery =
         "SELECT `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, " +
@@ -284,11 +288,16 @@ module.exports.controller = (app, io, socket_list) => {
         "INNER JOIN `category_detail` AS `cd` ON `cd`.`cat_id` = `pd`.`cat_id` AND `cd`.`status` = 1 " +
         "LEFT JOIN  `favorite_detail` AS `fd` ON  `pd`.`prod_id` = `fd`.`prod_id` AND `fd`.`user_id` = ? " +
         "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` AND `td`.`status` = 1 " +
-        "WHERE `pd`.`status` = '1' AND `pd`.`name` LIKE ? GROUP BY `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `image`, `cd`.`cat_name`, `td`.`type_name`;";
+        "WHERE `pd`.`status` = '1' AND `pd`.`name` LIKE ? AND `pd`.`price` BETWEEN ? AND ? GROUP BY `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `image`, `cd`.`cat_name`, `td`.`type_name`;";
 
       db.query(
         searchQuery,
-        ["1", searchObj.keyword ? `%${searchObj.keyword}%` : "%%"],
+        [
+          "1",
+          searchObj.keyword ? `%${searchObj.keyword}%` : "%%",
+          minprice,
+          maxprice,
+        ],
         (err, result) => {
           if (err) {
             helper.ThrowHtmlError(err, res);
