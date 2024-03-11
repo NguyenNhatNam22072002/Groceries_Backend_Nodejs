@@ -183,13 +183,18 @@ module.exports.controller = (app, io, socket_list) => {
     );
   });
 
-  app.post("/api/app/home", (req, res) => {
+  app.post("/api/app/home_exlusive_offer", (req, res) => {
     helper.Dlog(req.body);
     var reqObj = req.body;
+    var page = reqObj.page || 1; // Default to page 1 if not provided
+    var itemsPerPage = reqObj.itemsPerPage || 5; // Default to 5 items per page if not provided
+
     checkAccessToken(
       req.headers,
       res,
       (uObj) => {
+        var offset = (page - 1) * itemsPerPage;
+
         db.query(
           "SELECT `od`.`price` as `offer_price`, MIN(`od`.`start_date`) AS `min_start_date`, `od`.`end_date`, `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, (CASE WHEN `imd`.`image` != '' THEN CONCAT('" +
             image_base_url +
@@ -199,32 +204,9 @@ module.exports.controller = (app, io, socket_list) => {
             "INNER JOIN `category_detail` AS `cd` ON `cd`.`cat_id` = `pd`.`cat_id` AND `cd`.`status` = 1 " +
             "LEFT JOIN  `favorite_detail` AS `fd` ON  `pd`.`prod_id` = `fd`.`prod_id` AND `fd`.`user_id` = ? AND `fd`.`status`=  1 " +
             "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` AND `td`.`status` = 1 " +
-            "WHERE `od`.`status` = ? AND `od`.`start_date` <= NOW() AND `od`.`end_date` >= NOW() GROUP BY `pd`.`prod_id`,`od`.`price`, `od`.`end_date`, `imd`.`image`; " +
-            "SELECT `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, (CASE WHEN `imd`.`image` != '' THEN CONCAT('" +
-            image_base_url +
-            "' ,'', `imd`.`image` ) ELSE '' END) AS `image`, `cd`.`cat_name`,  `td`.`type_name`, MAX( CASE WHEN `fd`.`fav_id` IS NOT NULL THEN 1 ELSE 0 END ) AS `is_fav`, SUM(`pd`.`sales_quantity`) AS `sales_quantity` FROM  `product_detail` AS `pd` " +
-            "LEFT JOIN  `favorite_detail` AS `fd` ON  `pd`.`prod_id` = `fd`.`prod_id` AND `fd`.`user_id` = ? AND `fd`.`status`=  1 " +
-            "INNER JOIN `image_detail` AS `imd` ON `pd`.`prod_id` = `imd`.`prod_id` AND `imd`.`status` = 1 " +
-            "INNER JOIN `category_detail` AS `cd` ON `cd`.`cat_id` = `pd`.`cat_id` AND `cd`.`status` = 1 " +
-            "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` AND `td`.`status` = 1 " +
-            "WHERE `pd`.`status` = ? " +
-            "GROUP BY `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `image`, `cd`.`cat_name`, `td`.`type_name` " +
-            "ORDER BY `sales_quantity` DESC " + // Order by sales_quantity in descending order
-            "LIMIT 0, 10; " +
-            "SELECT `type_id`, `type_name`, (CASE WHEN `image` != '' THEN  CONCAT('" +
-            image_base_url +
-            "' ,'', `image` ) ELSE '' END) AS `image` , `color` FROM `type_detail` WHERE `status` = ?; " +
-            "SELECT `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, (CASE WHEN `imd`.`image` != '' THEN CONCAT('" +
-            image_base_url +
-            "' ,'', `imd`.`image` ) ELSE '' END) AS `image`, `cd`.`cat_name`,  `td`.`type_name`, MAX( CASE WHEN `fd`.`fav_id` IS NOT NULL THEN 1 ELSE 0 END ) AS `is_fav` FROM  `product_detail` AS `pd` " +
-            "LEFT JOIN  `favorite_detail` AS `fd` ON  `pd`.`prod_id` = `fd`.`prod_id` AND `fd`.`user_id` = ? AND `fd`.`status`=  1 " +
-            "INNER JOIN `image_detail` AS `imd` ON `pd`.`prod_id` = `imd`.`prod_id` AND `imd`.`status` = 1 " +
-            "INNER JOIN `category_detail` AS `cd` ON `cd`.`cat_id` = `pd`.`cat_id` AND `cd`.`status` = 1 " +
-            "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` AND `td`.`status` = 1 " +
-            "WHERE `pd`.`status` = ? " +
-            "GROUP BY `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `image`, `cd`.`cat_name`, `td`.`type_name` " +
-            "ORDER BY `pd`.`prod_id` DESC;",
-          ["1", uObj.user_id, "1", uObj.user_id, "1", "1", uObj.user_id, "1"],
+            "WHERE `od`.`status` = ? AND `od`.`start_date` <= NOW() AND `od`.`end_date` >= NOW() GROUP BY `pd`.`prod_id`,`od`.`price`, `od`.`end_date`, `imd`.`image` " +
+            "LIMIT ? OFFSET ?;",
+          ["1", uObj.user_id, "1", itemsPerPage, offset],
           (err, result) => {
             if (err) {
               helper.ThrowHtmlError(err, res);
@@ -234,10 +216,128 @@ module.exports.controller = (app, io, socket_list) => {
             res.json({
               status: "1",
               payload: {
-                offer_list: result[0],
-                best_sell_list: result[1],
-                type_list: result[2],
-                list: result[3],
+                offer_list: result,
+              },
+              message: msg_success,
+            });
+          }
+        );
+      },
+      "1"
+    );
+  });
+
+  app.post("/api/app/home_best_selling", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+    var page = reqObj.page || 1; // Default to page 1 if not provided
+    var itemsPerPage = reqObj.itemsPerPage || 5; // Default to 10 items per page if not provided
+
+    checkAccessToken(
+      req.headers,
+      res,
+      (uObj) => {
+        var offset = (page - 1) * itemsPerPage;
+
+        db.query(
+          "SELECT `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, (CASE WHEN `imd`.`image` != '' THEN CONCAT('" +
+            image_base_url +
+            "' ,'', `imd`.`image` ) ELSE '' END) AS `image`, `cd`.`cat_name`,  `td`.`type_name`, MAX( CASE WHEN `fd`.`fav_id` IS NOT NULL THEN 1 ELSE 0 END ) AS `is_fav`, SUM(`pd`.`sales_quantity`) AS `sales_quantity` FROM  `product_detail` AS `pd` " +
+            "LEFT JOIN  `favorite_detail` AS `fd` ON  `pd`.`prod_id` = `fd`.`prod_id` AND `fd`.`user_id` = ? AND `fd`.`status`=  1 " +
+            "INNER JOIN `image_detail` AS `imd` ON `pd`.`prod_id` = `imd`.`prod_id` AND `imd`.`status` = 1 " +
+            "INNER JOIN `category_detail` AS `cd` ON `cd`.`cat_id` = `pd`.`cat_id` AND `cd`.`status` = 1 " +
+            "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` AND `td`.`status` = 1 " +
+            "WHERE `pd`.`status` = ? " +
+            "GROUP BY `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `image`, `cd`.`cat_name`, `td`.`type_name` " +
+            "ORDER BY `sales_quantity` DESC " + // Order by sales_quantity in descending order
+            "LIMIT ? OFFSET ?;",
+          [uObj.user_id, "1", itemsPerPage, offset],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+            res.json({
+              status: "1",
+              payload: {
+                best_sell_list: result,
+              },
+              message: msg_success,
+            });
+          }
+        );
+      },
+      "1"
+    );
+  });
+
+  app.post("/api/app/home_groceries", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+    checkAccessToken(
+      req.headers,
+      res,
+      (uObj) => {
+        db.query(
+          "SELECT `type_id`, `type_name`, (CASE WHEN `image` != '' THEN  CONCAT('" +
+            image_base_url +
+            "' ,'', `image` ) ELSE '' END) AS `image` , `color` FROM `type_detail` WHERE `status` = ?; ",
+          ["1"],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: {
+                type_list: result,
+              },
+              message: msg_success,
+            });
+          }
+        );
+      },
+      "1"
+    );
+  });
+
+  app.post("/api/app/home_all_products", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+    var page = reqObj.page || 1; // Default to page 1 if not provided
+    var itemsPerPage = 5;
+
+    checkAccessToken(
+      req.headers,
+      res,
+      (uObj) => {
+        var offset = (page - 1) * itemsPerPage;
+
+        db.query(
+          "SELECT `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, (CASE WHEN `imd`.`image` != '' THEN CONCAT('" +
+            image_base_url +
+            "' ,'', `imd`.`image` ) ELSE '' END) AS `image`, `cd`.`cat_name`,  `td`.`type_name`, MAX( CASE WHEN `fd`.`fav_id` IS NOT NULL THEN 1 ELSE 0 END ) AS `is_fav` FROM  `product_detail` AS `pd` " +
+            "LEFT JOIN  `favorite_detail` AS `fd` ON  `pd`.`prod_id` = `fd`.`prod_id` AND `fd`.`user_id` = ? AND `fd`.`status`=  1 " +
+            "INNER JOIN `image_detail` AS `imd` ON `pd`.`prod_id` = `imd`.`prod_id` AND `imd`.`status` = 1 " +
+            "INNER JOIN `category_detail` AS `cd` ON `cd`.`cat_id` = `pd`.`cat_id` AND `cd`.`status` = 1 " +
+            "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` AND `td`.`status` = 1 " +
+            "WHERE `pd`.`status` = ? " +
+            "GROUP BY `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `image`, `cd`.`cat_name`, `td`.`type_name` " +
+            "ORDER BY `pd`.`prod_id` DESC " +
+            "LIMIT ? OFFSET ?;",
+          [uObj.user_id, "1", itemsPerPage, offset],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: {
+                list: result,
               },
               message: msg_success,
             });
