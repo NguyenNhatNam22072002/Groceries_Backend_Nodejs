@@ -1934,7 +1934,7 @@ module.exports.controller = (app, io, socket_list) => {
         "LEFT JOIN `offer_detail` AS `od` ON `pd`.`prod_id` = `od`.`prod_id` AND `od`.`status` = 1 AND `od`.`start_date` <= NOW() AND `od`.`end_date` >= NOW() " +
         "INNER JOIN `image_detail` AS `imd` ON `pd`.`prod_id` = `imd`.`prod_id` AND `imd`.`status` = 1 " +
         "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` " +
-        "WHERE `ucd`.`user_id` = ? AND `ucd`.`status` = ? GROUP BY `ucd`.`cart_id`, `pd`.`prod_id` ",
+        "WHERE `ucd`.`user_id` = ? AND `ucd`.`status` = ? GROUP BY `ucd`.`cart_id`, `pd`.`prod_id`, `fd`.`fav_id`, `od`.`price`, `od`.`start_date`, `od`.`end_date`,`od`.`offer_id`,`imd`.`image`; ",
       [user_id, user_id, "1"],
       (err, result) => {
         if (err) {
