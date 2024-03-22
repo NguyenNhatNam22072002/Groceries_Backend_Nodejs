@@ -5,6 +5,6 @@ Content-Type: application/x-www-form-urlencoded
 
 {
 	"key": "prod_id",
-									"value": "5",
-									"type": "default"
+	"value": "5",
+	"type": "default"
 }
