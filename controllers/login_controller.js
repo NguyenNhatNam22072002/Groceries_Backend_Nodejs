@@ -1614,6 +1614,68 @@ module.exports.controller = (app, io, socket_list) => {
     });
   });
 
+  app.post("/api/app/product_comment", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+
+    checkAccessToken(req.headers, res, (userObj) => {
+      helper.CheckParameterValid(res, reqObj, ["product_id", "comment"], () => {
+        // Insert comment into database
+        db.query(
+          "INSERT INTO `product_comments`(`user_id`, `product_id`, `comment`, `comment_date`) VALUES (?, ?, ?, NOW())",
+          [userObj.user_id, reqObj.product_id, reqObj.comment],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+            res.json({
+              status: "1",
+              message: "Comment added successfully",
+            });
+          }
+        );
+      });
+    });
+  });
+
+  app.post("/api/app/product_review", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+
+    checkAccessToken(req.headers, res, (userObj) => {
+      helper.CheckParameterValid(
+        res,
+        reqObj,
+        ["order_id", "product_id", "rating"],
+        () => {
+          // Insert review into database
+          db.query(
+            "INSERT INTO `product_reviews`(`user_id`, `order_id`, `product_id`, `rating`, `review_date`) VALUES (?, ?, ?, ?, NOW())",
+            [
+              userObj.user_id,
+              reqObj.order_id,
+              reqObj.product_id,
+              reqObj.rating,
+            ],
+            (err, result) => {
+              if (err) {
+                helper.ThrowHtmlError(err, res);
+                return;
+              }
+              // Award discount code or loyalty points
+              // Code to award discount or loyalty points
+              res.json({
+                status: "1",
+                message: "Review added successfully",
+              });
+            }
+          );
+        }
+      );
+    });
+  });
+
   app.post("/api/app/notification_list", (req, res) => {
     helper.Dlog(req.body);
     var reqObj = req.body;
