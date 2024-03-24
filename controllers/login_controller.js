@@ -533,7 +533,7 @@ module.exports.controller = (app, io, socket_list) => {
             "LEFT JOIN `brand_detail` AS `bd` ON `pd`.`brand_id` = `bd`.`brand_id` " +
             "LEFT JOIN `offer_detail` AS `od` ON `pd`.`prod_id` = `od`.`prod_id` AND `od`.`status` = 1 AND `od`.`start_date` <= NOW() AND `od`.`end_date` >= NOW() " +
             "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` " +
-            " WHERE `fd`.`user_id` = ? AND `fd`.`status` = '1' GROUP BY `pd`.`prod_id` ",
+            " WHERE `fd`.`user_id` = ? AND `fd`.`status` = '1' GROUP BY `fd`.`fav_id`, `pd`.`prod_id`, `od`.`price`,`od`.`start_date`, `od`.`end_date`,  `od`.`offer_id`, `imd`.`image`; ",
           [userObj.user_id],
           (err, result) => {
             if (err) {
@@ -1614,66 +1614,100 @@ module.exports.controller = (app, io, socket_list) => {
     });
   });
 
-  app.post("/api/app/product_comment", (req, res) => {
-    helper.Dlog(req.body);
-    var reqObj = req.body;
+  app.post("/api/app/product_reviews", (req, res) => {
+    const { product_id } = req.body;
 
-    checkAccessToken(req.headers, res, (userObj) => {
-      helper.CheckParameterValid(res, reqObj, ["product_id", "comment"], () => {
-        // Insert comment into database
-        db.query(
-          "INSERT INTO `product_comments`(`user_id`, `product_id`, `comment`, `comment_date`) VALUES (?, ?, ?, NOW())",
-          [userObj.user_id, reqObj.product_id, reqObj.comment],
-          (err, result) => {
-            if (err) {
-              helper.ThrowHtmlError(err, res);
-              return;
-            }
-            res.json({
-              status: "1",
-              message: "Comment added successfully",
-            });
-          }
-        );
+    if (!product_id) {
+      res.json({
+        status: "0",
+        message: "Product ID is required",
       });
-    });
+      return;
+    }
+
+    db.query(
+      "SELECT * FROM review_detail WHERE product_id = ?",
+      [product_id],
+      (err, result) => {
+        if (err) {
+          helper.ThrowHtmlError(err, res);
+          return;
+        }
+
+        res.json({
+          status: "1",
+          payload: result,
+          message: "Reviews retrieved successfully",
+        });
+      }
+    );
   });
 
-  app.post("/api/app/product_review", (req, res) => {
-    helper.Dlog(req.body);
-    var reqObj = req.body;
+  app.post("/api/app/user_info", (req, res) => {
+    const { user_id } = req.body;
 
-    checkAccessToken(req.headers, res, (userObj) => {
-      helper.CheckParameterValid(
-        res,
-        reqObj,
-        ["order_id", "product_id", "rating"],
-        () => {
-          // Insert review into database
-          db.query(
-            "INSERT INTO `product_reviews`(`user_id`, `order_id`, `product_id`, `rating`, `review_date`) VALUES (?, ?, ?, ?, NOW())",
-            [
-              userObj.user_id,
-              reqObj.order_id,
-              reqObj.product_id,
-              reqObj.rating,
-            ],
-            (err, result) => {
-              if (err) {
-                helper.ThrowHtmlError(err, res);
-                return;
-              }
-              // Award discount code or loyalty points
-              // Code to award discount or loyalty points
-              res.json({
-                status: "1",
-                message: "Review added successfully",
-              });
-            }
-          );
+    if (!user_id) {
+      res.json({
+        status: "0",
+        message: "User ID is required",
+      });
+      return;
+    }
+
+    db.query(
+      "SELECT * FROM user_detail WHERE user_id = ?",
+      [user_id],
+      (err, result) => {
+        if (err) {
+          helper.ThrowHtmlError(err, res);
+          return;
         }
-      );
-    });
+
+        if (result.length === 0) {
+          res.json({
+            status: "0",
+            message: "User not found",
+          });
+          return;
+        }
+
+        const userInfo = result[0]; // Lấy thông tin người dùng từ kết quả truy vấn
+
+        res.json({
+          status: "1",
+          payload: userInfo,
+          message: "User information retrieved successfully",
+        });
+      }
+    );
+  });
+
+  app.post("/api/app/add_product_review", (req, res) => {
+    helper.Dlog(req.body);
+    const { user_id, product_id, comment, rating } = req.body;
+
+    db.query(
+      "INSERT INTO review_detail (user_id, product_id, comment, rating, created_at) VALUES (?, ?, ?, ?, NOW())",
+      [user_id, product_id, comment, rating],
+      (err, result) => {
+        if (err) {
+          helper.ThrowHtmlError(err, res);
+          return;
+        }
+
+        if (result) {
+          res.json({
+            status: "1",
+            message: "Review added successfully",
+          });
+        } else {
+          res.json({
+            status: "0",
+            message: "Failed to add review",
+          });
+        }
+      }
+    );
   });
 
   app.post("/api/app/notification_list", (req, res) => {
@@ -1984,7 +2018,7 @@ module.exports.controller = (app, io, socket_list) => {
         "LEFT JOIN `brand_detail` AS `bd` ON `pd`.`brand_id` = `bd`.`brand_id` " +
         "LEFT JOIN `offer_detail` AS `od` ON `pd`.`prod_id` = `od`.`prod_id` AND `od`.`status` = 1 AND `od`.`start_date` <= NOW() AND `od`.`end_date` >= NOW() " +
         "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` " +
-        " WHERE `pd`.`status` = ? AND `pd`.`prod_id` = ? GROUP BY `pd`.`prod_id`; " +
+        " WHERE `pd`.`status` = ? AND `pd`.`prod_id` = ? GROUP BY `fd`.`fav_id`, `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `pd`.`created_date`, `pd`.`modify_date`, `cd`.`cat_name`, `bd`.`brand_name`, `td`.`type_name`, `od`.`price`, `pd`.`price`, `od`.`start_date`, `od`.`end_date`, `imd`.`image`, `od`.`offer_id`; " +
         " SELECT `nutrition_id`, `prod_id`, `nutrition_name`, `nutrition_value` FROM `nutrition_detail` WHERE `prod_id` = ? AND `status` = ? ORDER BY `nutrition_name`;" +
         "SELECT `img_id`, `prod_id`, (CASE WHEN `image` != '' THEN  CONCAT( '" +
         image_base_url +
