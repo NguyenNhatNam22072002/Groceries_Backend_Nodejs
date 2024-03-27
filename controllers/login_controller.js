@@ -1684,11 +1684,11 @@ module.exports.controller = (app, io, socket_list) => {
 
   app.post("/api/app/add_product_review", (req, res) => {
     helper.Dlog(req.body);
-    const { user_id, product_id, comment, rating } = req.body;
+    const { user_id, product_id, comment, rating, user_name } = req.body;
 
     db.query(
-      "INSERT INTO review_detail (user_id, product_id, comment, rating, created_at) VALUES (?, ?, ?, ?, NOW())",
-      [user_id, product_id, comment, rating],
+      "INSERT INTO review_detail (user_id, product_id, comment, rating, created_at, user_name) VALUES (?, ?, ?, ?, NOW(), ?)",
+      [user_id, product_id, comment, rating, user_name],
       (err, result) => {
         if (err) {
           helper.ThrowHtmlError(err, res);
