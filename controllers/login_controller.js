@@ -53,7 +53,7 @@ module.exports.controller = (app, io, socket_list) => {
 
             if (result.affectedRows > 0) {
               db.query(
-                'SELECT `user_id`, `username`, `name`, `email`, `mobile`, `mobile_code`, `password`, `auth_token`, `status`, `created_date` FROM `user_detail` WHERE `email` = ? AND `password` = ? AND `status` = "1" ',
+                'SELECT * FROM `user_detail` WHERE `email` = ? AND `password` = ? AND `status` = "1" ',
                 [reqObj.email, reqObj.password],
                 (err, result) => {
                   if (err) {
@@ -852,11 +852,17 @@ module.exports.controller = (app, io, socket_list) => {
             }
 
             var user_pay_price =
-              final_total + deliver_price_amount + -discountAmount;
+              final_total +
+              deliver_price_amount +
+              -discountAmount -
+              reqObj.coin;
+
+            // Trừ 1 từ final total nếu người dùng đồng ý
+
             res.json({
               status: "1",
               payload: result,
-              total: total.toFixed(2),
+              total: final_total.toFixed(2),
               deliver_price_amount: deliver_price_amount.toFixed(2),
               discount_amount: discountAmount.toFixed(2),
               user_pay_price: user_pay_price.toFixed(2),
@@ -1999,6 +2005,102 @@ module.exports.controller = (app, io, socket_list) => {
               res.json({
                 status: "0",
                 message: msg_fail,
+              });
+            }
+          }
+        );
+      }
+    );
+  });
+
+  app.post("/api/app/add_coin_review", (req, res) => {
+    const { user_id } = req.body;
+
+    // Check if user_id and order_id are provided
+    if (!user_id) {
+      res.json({
+        status: "0",
+        message: "User ID is required",
+      });
+      return;
+    }
+
+    // Query to update coin for the user
+    db.query(
+      "UPDATE `user_detail` SET `coin` = `coin` + 1 WHERE `user_id` = ?",
+      [user_id],
+      (err, result) => {
+        if (err) {
+          helper.ThrowHtmlError(err, res);
+          return;
+        }
+
+        if (result.affectedRows > 0) {
+          res.json({
+            status: "1",
+            message: "Coin added successfully",
+          });
+        } else {
+          res.json({
+            status: "0",
+            message: "Failed to add coin",
+          });
+        }
+      }
+    );
+  });
+
+  app.post("/api/app/use_coin_for_order", (req, res) => {
+    const { user_id } = req.body;
+
+    // Check if user_id and order_id are provided
+    if (!user_id) {
+      res.json({
+        status: "0",
+        message: "User ID is required",
+      });
+      return;
+    }
+
+    // Query to check if the user has enough coins
+    db.query(
+      "SELECT `coin` FROM `user_detail` WHERE `user_id` = ?",
+      [user_id],
+      (err, result) => {
+        if (err) {
+          helper.ThrowHtmlError(err, res);
+          return;
+        }
+
+        // Check if the user has enough coins
+        const userCoin = result[0].coin;
+        if (userCoin < 1) {
+          res.json({
+            status: "0",
+            message: "Not enough coins to use for this order",
+          });
+          return;
+        }
+
+        // Update the user's coin balance by subtracting 1 coin
+        db.query(
+          "UPDATE `user_detail` SET `coin` = `coin` - 1 WHERE `user_id` = ?",
+          [user_id],
+          (err, updateResult) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            if (updateResult.affectedRows > 0) {
+              res.json({
+                status: "1",
+                message: "Coin used successfully for this order",
+              });
+            } else {
+              res.json({
+                status: "0",
+                message: "Failed to use coin for this order",
               });
             }
           }
