@@ -2014,6 +2014,97 @@ module.exports.controller = (app, io, socket_list) => {
       "2"
     );
   });
+
+  app.post("/api/admin/sales_add", (req, res) => {
+    var reqObj = req.body;
+
+    helper.CheckParameterValid(res, reqObj, ["date", "revenue"], () => {
+      checkAccessToken(
+        req.headers,
+        res,
+        (uObj) => {
+          db.query(
+            "INSERT INTO `sales_management` (`date`, `revenue`) VALUES (?, ?)",
+            [reqObj.date, reqObj.revenue],
+            (err, result) => {
+              if (err) {
+                helper.ThrowHtmlError(err, res);
+                return;
+              }
+
+              if (result) {
+                res.json({
+                  status: "1",
+                  message: "Sales added Successfully.",
+                });
+              } else {
+                res.json({ status: "0", message: "Fail" });
+              }
+            }
+          );
+        },
+        "2"
+      );
+    });
+  });
+
+  app.post("/api/admin/sales_by_date", (req, res) => {
+    var reqObj = req.body;
+
+    helper.CheckParameterValid(res, reqObj, ["date"], () => {
+      checkAccessToken(
+        req.headers,
+        res,
+        (uObj) => {
+          db.query(
+            "SELECT * FROM `sales_management` WHERE `date` = ?",
+            [reqObj.date],
+            (err, result) => {
+              if (err) {
+                helper.ThrowHtmlError(err, res);
+                return;
+              }
+
+              res.json({
+                status: "1",
+                payload: result,
+              });
+            }
+          );
+        },
+        "2"
+      );
+    });
+  });
+
+  app.post("/api/admin/sales_last_5_months", (req, res) => {
+    checkAccessToken(
+      req.headers,
+      res,
+      (uObj) => {
+        db.query(
+          "SELECT CONCAT(LPAD(MONTH(`date`), 2, '0'), '-', YEAR(`date`)) AS month_year, SUM(`revenue`) AS total_revenue " +
+            "FROM `sales_management` " +
+            "WHERE (`date` >= DATE_SUB(LAST_DAY(CURRENT_DATE()), INTERVAL 5 MONTH) AND " +
+            "      `date` < LAST_DAY(CURRENT_DATE())) " +
+            "GROUP BY YEAR(`date`), MONTH(`date`), CONCAT(LPAD(MONTH(`date`), 2, '0'), '-', YEAR(`date`)) " +
+            "ORDER BY YEAR(`date`) ASC, MONTH(`date`) ASC",
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: result,
+            });
+          }
+        );
+      },
+      "2"
+    );
+  });
 };
 
 function saveImage(imageFile, savePath) {
