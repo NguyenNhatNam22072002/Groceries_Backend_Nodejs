@@ -1702,10 +1702,30 @@ module.exports.controller = (app, io, socket_list) => {
         }
 
         if (result) {
-          res.json({
-            status: "1",
-            message: "Review added successfully",
-          });
+          // Add notification for admin
+          const notification =
+            "A new review has been added for product " +
+            product_id +
+            ": " +
+            comment;
+          db.query(
+            "INSERT INTO notification_review (product_id, message, created_at) VALUES (?, ?, NOW())",
+            [product_id, notification],
+            (notificationErr, notificationResult) => {
+              if (notificationErr) {
+                console.error(
+                  "Failed to add notification for admin:",
+                  notificationErr
+                );
+                // Do something if notification addition fails
+              }
+              // Return success response for adding review
+              res.json({
+                status: "1",
+                message: "Review added successfully",
+              });
+            }
+          );
         } else {
           res.json({
             status: "0",

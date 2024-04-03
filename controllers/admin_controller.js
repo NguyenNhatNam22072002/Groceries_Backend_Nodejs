@@ -2105,6 +2105,104 @@ module.exports.controller = (app, io, socket_list) => {
       "2"
     );
   });
+
+  app.post("/api/admin/user_list", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+
+    checkAccessToken(
+      req.headers,
+      res,
+      (userObj) => {
+        db.query(
+          "SELECT * FROM `user_detail` WHERE `user_type` = ? ORDER BY `created_date` DESC",
+          [1], // Filter by user_type = 1
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: result,
+              message: "Success",
+            });
+          }
+        );
+      },
+      "2"
+    );
+  });
+
+  app.post("/api/admin/notification_list", (req, res) => {
+    checkAccessToken(
+      req.headers,
+      res,
+      (userObj) => {
+        db.query(
+          "SELECT * FROM `notification_review` ORDER BY `created_at` DESC",
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: result,
+              message: "Success",
+            });
+          }
+        );
+      },
+      "2"
+    );
+  });
+
+  app.post("/api/admin/home_best_selling", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+    var page = reqObj.page || 1; // Default to page 1 if not provided
+    var itemsPerPage = reqObj.itemsPerPage || 5; // Default to 10 items per page if not provided
+
+    // Kiểm tra quyền truy cập của admin
+    checkAccessToken(
+      req.headers,
+      res,
+      (userObj) => {
+        var offset = (page - 1) * itemsPerPage;
+
+        db.query(
+          "SELECT `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, (CASE WHEN `imd`.`image` != '' THEN CONCAT('" +
+            image_base_url +
+            "' ,'', `imd`.`image` ) ELSE '' END) AS `image`, `cd`.`cat_name`,  `td`.`type_name`, SUM(`pd`.`sales_quantity`) AS `sales_quantity` FROM  `product_detail` AS `pd` " +
+            "INNER JOIN `image_detail` AS `imd` ON `pd`.`prod_id` = `imd`.`prod_id` AND `imd`.`status` = 1 " +
+            "INNER JOIN `category_detail` AS `cd` ON `cd`.`cat_id` = `pd`.`cat_id` AND `cd`.`status` = 1 " +
+            "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` AND `td`.`status` = 1 " +
+            "WHERE `pd`.`status` = ? " +
+            "GROUP BY `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `image`, `cd`.`cat_name`, `td`.`type_name` " +
+            "ORDER BY `sales_quantity` DESC " + // Order by sales_quantity in descending order
+            "LIMIT ? OFFSET ?;",
+          ["1", itemsPerPage, offset],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+            res.json({
+              status: "1",
+              payload: {
+                best_sell_list: result,
+              },
+              message: msg_success,
+            });
+          }
+        );
+      },
+      "2"
+    );
+  });
 };
 
 function saveImage(imageFile, savePath) {
