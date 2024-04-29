@@ -1783,7 +1783,112 @@ module.exports.controller = (app, io, socket_list) => {
             "INNER JOIN `cart_detail` AS `cd` ON FIND_IN_SET(`cd`.`cart_id`, `od`.`cart_id`) > 0  " +
             "INNER JOIN `product_detail` AS `pd` ON  `cd`.`prod_id` = `pd`.`prod_id` " +
             "INNER JOIN `image_detail` AS `imd` ON  `imd`.`prod_id` = `pd`.`prod_id` " +
-            "WHERE (`od`.`payment_type` = 1 OR ( `od`.`payment_type` = 2 AND `od`.`payment_status` = 2 ) ) AND `order_status` <= 2 GROUP BY `od`.`order_id` ORDER BY `od`.`order_id` ",
+            "WHERE (`od`.`payment_type` = 1 OR ( `od`.`payment_type` = 2 AND `od`.`payment_status` = 2 ) ) AND `order_status` = 1 GROUP BY `od`.`order_id` ORDER BY `od`.`modify_date` DESC",
+          [],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: result,
+              message: msg_success,
+            });
+          }
+        );
+      },
+      "2"
+    );
+  });
+
+  app.post("/api/admin/accepted_orders_list", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+
+    checkAccessToken(
+      req.headers,
+      res,
+      (userObj) => {
+        db.query(
+          "SELECT `od`.`order_id`, `od`.`user_id`, `od`.`cart_id`, `od`.`total_price`, `od`.`user_pay_price`, `od`.`discount_price`, `od`.`deliver_price`, `od`.`deliver_type`, `od`.`payment_type`, `od`.`payment_status`, `od`.`order_status`, `od`.`status`, `od`.`created_date`, GROUP_CONCAT(DISTINCT `pd`.`name` SEPARATOR ',') AS `names`, GROUP_CONCAT(DISTINCT (CASE WHEN `imd`.`image` != '' THEN  CONCAT( '" +
+            image_base_url +
+            "' ,'', `imd`.`image` ) ELSE '' END) SEPARATOR ',') AS `images`  FROM `order_detail` AS `od` " +
+            "INNER JOIN `cart_detail` AS `cd` ON FIND_IN_SET(`cd`.`cart_id`, `od`.`cart_id`) > 0  " +
+            "INNER JOIN `product_detail` AS `pd` ON  `cd`.`prod_id` = `pd`.`prod_id` " +
+            "INNER JOIN `image_detail` AS `imd` ON  `imd`.`prod_id` = `pd`.`prod_id` " +
+            "WHERE (`od`.`payment_type` = 1 OR ( `od`.`payment_type` = 2 AND `od`.`payment_status` = 2 ) ) AND `order_status` = 2 GROUP BY `od`.`order_id` ORDER BY `od`.`modify_date` DESC",
+          [],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: result,
+              message: msg_success,
+            });
+          }
+        );
+      },
+      "2"
+    );
+  });
+
+  app.post("/api/admin/processing_orders_list", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+
+    checkAccessToken(
+      req.headers,
+      res,
+      (userObj) => {
+        db.query(
+          "SELECT `od`.`order_id`, `od`.`user_id`, `od`.`cart_id`, `od`.`total_price`, `od`.`user_pay_price`, `od`.`discount_price`, `od`.`deliver_price`, `od`.`deliver_type`, `od`.`payment_type`, `od`.`payment_status`, `od`.`order_status`, `od`.`status`, `od`.`created_date`, GROUP_CONCAT(DISTINCT `pd`.`name` SEPARATOR ',') AS `names`, GROUP_CONCAT(DISTINCT (CASE WHEN `imd`.`image` != '' THEN  CONCAT( '" +
+            image_base_url +
+            "' ,'', `imd`.`image` ) ELSE '' END) SEPARATOR ',') AS `images`  FROM `order_detail` AS `od` " +
+            "INNER JOIN `cart_detail` AS `cd` ON FIND_IN_SET(`cd`.`cart_id`, `od`.`cart_id`) > 0  " +
+            "INNER JOIN `product_detail` AS `pd` ON  `cd`.`prod_id` = `pd`.`prod_id` " +
+            "INNER JOIN `image_detail` AS `imd` ON  `imd`.`prod_id` = `pd`.`prod_id` " +
+            "WHERE (`od`.`payment_type` = 1 OR ( `od`.`payment_type` = 2 AND `od`.`payment_status` = 2 ) ) AND `order_status` = 3 GROUP BY `od`.`order_id` ORDER BY `od`.`modify_date` DESC",
+          [],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: result,
+              message: msg_success,
+            });
+          }
+        );
+      },
+      "2"
+    );
+  });
+
+  app.post("/api/admin/delivering_orders_list", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+
+    checkAccessToken(
+      req.headers,
+      res,
+      (userObj) => {
+        db.query(
+          "SELECT `od`.`order_id`, `od`.`user_id`, `od`.`cart_id`, `od`.`total_price`, `od`.`user_pay_price`, `od`.`discount_price`, `od`.`deliver_price`, `od`.`deliver_type`, `od`.`payment_type`, `od`.`payment_status`, `od`.`order_status`, `od`.`status`, `od`.`created_date`, GROUP_CONCAT(DISTINCT `pd`.`name` SEPARATOR ',') AS `names`, GROUP_CONCAT(DISTINCT (CASE WHEN `imd`.`image` != '' THEN  CONCAT( '" +
+            image_base_url +
+            "' ,'', `imd`.`image` ) ELSE '' END) SEPARATOR ',') AS `images`  FROM `order_detail` AS `od` " +
+            "INNER JOIN `cart_detail` AS `cd` ON FIND_IN_SET(`cd`.`cart_id`, `od`.`cart_id`) > 0  " +
+            "INNER JOIN `product_detail` AS `pd` ON  `cd`.`prod_id` = `pd`.`prod_id` " +
+            "INNER JOIN `image_detail` AS `imd` ON  `imd`.`prod_id` = `pd`.`prod_id` " +
+            "WHERE (`od`.`payment_type` = 1 OR ( `od`.`payment_type` = 2 AND `od`.`payment_status` = 2 ) ) AND `order_status` = 4 GROUP BY `od`.`order_id` ORDER BY `od`.`modify_date` DESC",
           [],
           (err, result) => {
             if (err) {
@@ -1818,7 +1923,42 @@ module.exports.controller = (app, io, socket_list) => {
             "INNER JOIN `cart_detail` AS `cd` ON FIND_IN_SET(`cd`.`cart_id`, `od`.`cart_id`) > 0  " +
             "INNER JOIN `product_detail` AS `pd` ON  `cd`.`prod_id` = `pd`.`prod_id` " +
             "INNER JOIN `image_detail` AS `imd` ON  `imd`.`prod_id` = `pd`.`prod_id` " +
-            "WHERE (`od`.`payment_type` = 1 OR ( `od`.`payment_type` = 2 AND `od`.`payment_status` = 2 ) ) AND `order_status` = 3 GROUP BY `od`.`order_id` ORDER BY `od`.`order_id` ",
+            "WHERE (`od`.`payment_type` = 1 OR ( `od`.`payment_type` = 2 AND `od`.`payment_status` = 2 ) ) AND `order_status` = 5 GROUP BY `od`.`order_id` ORDER BY `od`.`modify_date` DESC",
+          [],
+          (err, result) => {
+            if (err) {
+              helper.ThrowHtmlError(err, res);
+              return;
+            }
+
+            res.json({
+              status: "1",
+              payload: result,
+              message: msg_success,
+            });
+          }
+        );
+      },
+      "2"
+    );
+  });
+
+  app.post("/api/admin/canceled_orders_list", (req, res) => {
+    helper.Dlog(req.body);
+    var reqObj = req.body;
+
+    checkAccessToken(
+      req.headers,
+      res,
+      (userObj) => {
+        db.query(
+          "SELECT `od`.`order_id`, `od`.`user_id`, `od`.`cart_id`, `od`.`total_price`, `od`.`user_pay_price`, `od`.`discount_price`, `od`.`deliver_price`, `od`.`deliver_type`, `od`.`payment_type`, `od`.`payment_status`, `od`.`order_status`, `od`.`status`, `od`.`created_date`, GROUP_CONCAT(DISTINCT `pd`.`name` SEPARATOR ',') AS `names`, GROUP_CONCAT(DISTINCT (CASE WHEN `imd`.`image` != '' THEN  CONCAT( '" +
+            image_base_url +
+            "' ,'', `imd`.`image` ) ELSE '' END) SEPARATOR ',') AS `images`  FROM `order_detail` AS `od` " +
+            "INNER JOIN `cart_detail` AS `cd` ON FIND_IN_SET(`cd`.`cart_id`, `od`.`cart_id`) > 0  " +
+            "INNER JOIN `product_detail` AS `pd` ON  `cd`.`prod_id` = `pd`.`prod_id` " +
+            "INNER JOIN `image_detail` AS `imd` ON  `imd`.`prod_id` = `pd`.`prod_id` " +
+            "WHERE (`od`.`payment_type` = 1 OR ( `od`.`payment_type` = 2 AND `od`.`payment_status` = 2 ) ) AND `order_status` = 6 GROUP BY `od`.`order_id` ORDER BY `od`.`modify_date` DESC",
           [],
           (err, result) => {
             if (err) {
@@ -1895,7 +2035,7 @@ module.exports.controller = (app, io, socket_list) => {
               "LEFT JOIN `offer_detail` AS `od` ON `pd`.`prod_id` = `od`.`prod_id` AND `od`.`status` = 1 AND `od`.`start_date` <= NOW() AND `od`.`end_date` >= NOW() " +
               "INNER JOIN `image_detail` AS `imd` ON `pd`.`prod_id` = `imd`.`prod_id` AND `imd`.`status` = 1 " +
               "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` " +
-              "WHERE `uod`.`order_id` = ? AND `uod`.`user_id` = ? GROUP BY `ucd`.`cart_id`, `pd`.`prod_id`",
+              "WHERE `uod`.`order_id` = ? AND `uod`.`user_id` = ? GROUP BY `ucd`.`cart_id`, `pd`.`prod_id`, `od`.`price`, `od`.`start_date`, `od`.`end_date`, `od`.`offer_id`, `imd`.`image` LIMIT 0, 1000;",
             [reqObj.order_id, reqObj.user_id, reqObj.order_id, reqObj.user_id],
             (err, result) => {
               if (err) {
@@ -1952,7 +2092,7 @@ module.exports.controller = (app, io, socket_list) => {
                   return;
                 }
 
-                if (result.affectedRows > 0) {
+                if (result) {
                   var title = "";
                   var message = "";
                   var notiType = 2;
@@ -1963,17 +2103,19 @@ module.exports.controller = (app, io, socket_list) => {
                       message = "your order #" + reqObj.order_id + " accepted.";
                       break;
                     case "3":
+                      title = "Order Processing";
+                      message =
+                        "your order #" + reqObj.order_id + " processing.";
+                      break;
+                    case "4":
+                      title = "Order Delivering";
+                      message =
+                        "your order #" + reqObj.order_id + " delivering.";
+                      break;
+                    case "5":
                       title = "Order Delivered";
                       message =
                         "your order #" + reqObj.order_id + " delivered.";
-                      break;
-                    case "4":
-                      title = "Order Cancel";
-                      message = "your order #" + reqObj.order_id + " canceled.";
-                      break;
-                    case "5":
-                      title = "Order Declined";
-                      message = "your order #" + reqObj.order_id + " declined.";
                       break;
                     default:
                       break;
@@ -2077,28 +2219,59 @@ module.exports.controller = (app, io, socket_list) => {
     });
   });
 
-  app.post("/api/admin/sales_last_5_months", (req, res) => {
+  app.post("/api/admin/sales_summary", (req, res) => {
+    helper.Dlog(req.body);
+
     checkAccessToken(
       req.headers,
       res,
-      (uObj) => {
+      (userObj) => {
+        // Query for total order summary
         db.query(
-          "SELECT CONCAT(LPAD(MONTH(`date`), 2, '0'), '-', YEAR(`date`)) AS month_year, SUM(`revenue`) AS total_revenue " +
-            "FROM `sales_management` " +
-            "WHERE (`date` >= DATE_SUB(LAST_DAY(CURRENT_DATE()), INTERVAL 5 MONTH) AND " +
-            "      `date` < LAST_DAY(CURRENT_DATE())) " +
-            "GROUP BY YEAR(`date`), MONTH(`date`), CONCAT(LPAD(MONTH(`date`), 2, '0'), '-', YEAR(`date`)) " +
-            "ORDER BY YEAR(`date`) ASC, MONTH(`date`) ASC",
-          (err, result) => {
-            if (err) {
-              helper.ThrowHtmlError(err, res);
+          "SELECT COUNT(*) AS total_orders FROM `order_detail`",
+          (err1, orderResult) => {
+            if (err1) {
+              helper.ThrowHtmlError(err1, res);
               return;
             }
 
-            res.json({
-              status: "1",
-              payload: result,
-            });
+            // Query for total price summary
+            db.query(
+              "SELECT SUM(user_pay_price) AS user_pay_price FROM `order_detail` WHERE `order_status` = ?",
+              ["5"],
+              (err2, priceResult) => {
+                if (err2) {
+                  helper.ThrowHtmlError(err2, res);
+                  return;
+                }
+
+                // Query for sales summary of last 7 months
+                db.query(
+                  "SELECT CONCAT(LPAD(MONTH(`date`), 2, '0'), '-', YEAR(`date`)) AS month_year, SUM(`revenue`) AS total_revenue, SUM(`total_order`) AS total_order " +
+                    "FROM `sales_management` " +
+                    "WHERE (`date` >= DATE_SUB(LAST_DAY(CURRENT_DATE()), INTERVAL 7 MONTH) AND " +
+                    "      `date` < LAST_DAY(CURRENT_DATE())) " +
+                    "GROUP BY YEAR(`date`), MONTH(`date`), CONCAT(LPAD(MONTH(`date`), 2, '0'), '-', YEAR(`date`)) " +
+                    "ORDER BY YEAR(`date`) ASC, MONTH(`date`) ASC",
+                  (err3, salesResult) => {
+                    if (err3) {
+                      helper.ThrowHtmlError(err3, res);
+                      return;
+                    }
+
+                    res.json({
+                      status: "1",
+                      payload: {
+                        total_order_summary: orderResult[0],
+                        total_price_summary: priceResult[0],
+                        sales_summary_last_7_months: salesResult,
+                      },
+                      message: "Sales summary retrieved successfully",
+                    });
+                  }
+                );
+              }
+            );
           }
         );
       },

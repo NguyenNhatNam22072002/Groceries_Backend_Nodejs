@@ -1516,7 +1516,7 @@ module.exports.controller = (app, io, socket_list) => {
           "INNER JOIN `product_detail` AS `pd` ON  `cd`.`prod_id` = `pd`.`prod_id` " +
           "INNER JOIN `address_detail` AS `ad` ON  `od`.`address_id` = `ad`.`address_id` " +
           "INNER JOIN `image_detail` AS `imd` ON  `imd`.`prod_id` = `pd`.`prod_id` " +
-          "WHERE `od`.`user_id` = ? GROUP BY `od`.`order_id` ",
+          "WHERE `od`.`user_id` = ? GROUP BY `od`.`order_id` ORDER BY `od`.`modify_date` DESC", // Sắp xếp theo trường modify_date
         [userObj.user_id],
         (err, result) => {
           if (err) {
