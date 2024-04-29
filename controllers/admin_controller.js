@@ -239,11 +239,16 @@ module.exports.controller = (app, io, socket_list) => {
               "category/" + helper.fileNameGenerate(extension);
             var newPath = imageSavePath + imageFileName;
 
-            fs.rename(files.image[0].path, newPath, (err) => {
+            fs.copyFile(files.image[0].path, newPath, (err) => {
               if (err) {
                 helper.ThrowHtmlError(err, res);
                 return;
-              } else {
+              }
+              fs.unlink(files.image[0].path, (err) => {
+                if (err) {
+                  helper.ThrowHtmlError(err, res);
+                  return;
+                }
                 db.query(
                   "INSERT INTO `category_detail`( `cat_name`, `image`, `color`, `created_date`, `modify_date`) VALUES  (?,?,?, NOW(), NOW())",
                   [reqObj.cat_name[0], imageFileName, reqObj.color[0]],
@@ -269,7 +274,7 @@ module.exports.controller = (app, io, socket_list) => {
                     }
                   }
                 );
-              }
+              });
             });
           });
         });
@@ -309,13 +314,7 @@ module.exports.controller = (app, io, socket_list) => {
               var newPath = imageSavePath + imageFileName;
 
               condition = " `image` = '" + imageFileName + "', ";
-              fs.rename(files.image[0].path, newPath, (err) => {
-                if (err) {
-                  helper.ThrowHtmlError(err);
-                  return;
-                } else {
-                }
-              });
+              saveImage(files.image[0], newPath); // Call the saveImage function
             }
 
             db.query(
@@ -1068,7 +1067,11 @@ module.exports.controller = (app, io, socket_list) => {
       res,
       (uObj) => {
         db.query(
-          "SELECT `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, `pd`.`created_date`, `pd`.`modify_date`, `cd`.`cat_name`, IFNULL( `bd`.`brand_name`, '' ) AS `brand_name` , `td`.`type_name` FROM `product_detail` AS  `pd` " +
+          "SELECT `pd`.`prod_id`, `pd`.`cat_id`, `pd`.`brand_id`, `pd`.`type_id`, `pd`.`name`, `pd`.`detail`, `pd`.`unit_name`, `pd`.`unit_value`, `pd`.`nutrition_weight`, `pd`.`price`, " +
+            "(CASE WHEN `imd`.`image` != '' THEN  CONCAT('" +
+            image_base_url +
+            "' ,'', `imd`.`image` ) ELSE '' END) AS `image`, `pd`.`created_date`, `pd`.`modify_date`, `cd`.`cat_name`, IFNULL( `bd`.`brand_name`, '' ) AS `brand_name` , `td`.`type_name` FROM `product_detail` AS  `pd` " +
+            "INNER JOIN `image_detail` AS `imd` ON `pd`.`prod_id` = `imd`.`prod_id` AND `imd`.`status` = 1 " +
             "INNER JOIN `category_detail` AS `cd` ON `pd`.`cat_id` = `cd`.`cat_id` " +
             "LEFT JOIN `brand_detail` AS `bd` ON `pd`.`brand_id` = `bd`.`brand_id` " +
             "INNER JOIN `type_detail` AS `td` ON `pd`.`type_id` = `td`.`type_id` " +
