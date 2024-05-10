@@ -646,107 +646,131 @@ module.exports.controller = (app, io, socket_list) => {
           ],
           () => {
             helper.CheckParameterValid(res, files, ["image"], () => {
-              var imageNamePathArr = [];
-              var fullImageNamePathArr = [];
-              files.image.forEach((imageFile) => {
-                var extension = imageFile.originalFilename.substring(
-                  imageFile.originalFilename.lastIndexOf(".") + 1
-                );
-                var imageFileName =
-                  "product/" + helper.fileNameGenerate(extension);
+              var extension = files.image[0].originalFilename.substring(
+                files.image[0].originalFilename.lastIndexOf(".") + 1
+              );
 
-                imageNamePathArr.push(imageFileName);
-                fullImageNamePathArr.push(helper.ImagePath() + imageFileName);
-                saveImage(imageFile, imageSavePath + imageFileName);
-              });
+              var imageFileName =
+                "product/" + helper.fileNameGenerate(extension);
+              var newPath = imageSavePath + imageFileName;
 
-              helper.Dlog(imageNamePathArr);
-              helper.Dlog(fullImageNamePathArr);
+              // Function to move file
+              function moveFile(oldPath, newPath, callback) {
+                let readStream = fs.createReadStream(oldPath);
+                let writeStream = fs.createWriteStream(newPath);
 
-              db.query(
-                "INSERT INTO `product_detail`(`cat_id`, `brand_id`, `type_id`, `name`, `detail`, `unit_name`, `unit_value`, `nutrition_weight`, `price`, `created_date`, `modify_date`) VALUES (?,?,?, ?,?,?, ?,?,?, NOW(), NOW() ) ",
-                [
-                  reqObj.cat_id[0],
-                  reqObj.brand_id[0],
-                  reqObj.type_id[0],
-                  reqObj.name[0],
-                  reqObj.detail[0],
-                  reqObj.unit_name[0],
-                  reqObj.unit_value[0],
-                  reqObj.nutrition_weight[0],
-                  reqObj.price[0],
-                ],
-                (err, result) => {
-                  if (err) {
-                    helper.ThrowHtmlError(err, res);
-                    return;
-                  }
+                readStream.on("error", callback);
+                writeStream.on("error", callback);
 
-                  if (result) {
-                    var nutritionInsertData = [];
+                readStream.on("close", function () {
+                  fs.unlink(oldPath, callback);
+                });
 
-                    var nutritionDataArr = JSON.parse(reqObj.nutrition_date[0]);
+                readStream.pipe(writeStream);
+              }
 
-                    nutritionDataArr.forEach((nObj) => {
-                      nutritionInsertData.push([
-                        result.insertId,
-                        nObj.name,
-                        nObj.value,
-                      ]);
-                    });
+              // Move file from temporary directory to destination
+              moveFile(files.image[0].path, newPath, (err) => {
+                if (err) {
+                  helper.ThrowHtmlError(err, res);
+                  return;
+                }
 
-                    if (nutritionDataArr.length > 0) {
+                helper.Dlog("Image saved successfully: " + imageFileName);
+
+                var imageNamePathArr = [imageFileName];
+                var fullImageNamePathArr = [helper.ImagePath() + imageFileName];
+
+                helper.Dlog(imageNamePathArr);
+                helper.Dlog(fullImageNamePathArr);
+
+                db.query(
+                  "INSERT INTO `product_detail`(`cat_id`, `brand_id`, `type_id`, `name`, `detail`, `unit_name`, `unit_value`, `nutrition_weight`, `price`, `created_date`, `modify_date`) VALUES (?,?,?, ?,?,?, ?,?,?, NOW(), NOW() ) ",
+                  [
+                    reqObj.cat_id[0],
+                    reqObj.brand_id[0],
+                    reqObj.type_id[0],
+                    reqObj.name[0],
+                    reqObj.detail[0],
+                    reqObj.unit_name[0],
+                    reqObj.unit_value[0],
+                    reqObj.nutrition_weight[0],
+                    reqObj.price[0],
+                  ],
+                  (err, result) => {
+                    if (err) {
+                      helper.ThrowHtmlError(err, res);
+                      return;
+                    }
+
+                    if (result) {
+                      var nutritionInsertData = [];
+
+                      var nutritionDataArr = JSON.parse(
+                        reqObj.nutrition_date[0]
+                      );
+
+                      nutritionDataArr.forEach((nObj) => {
+                        nutritionInsertData.push([
+                          result.insertId,
+                          nObj.name,
+                          nObj.value,
+                        ]);
+                      });
+
+                      if (nutritionDataArr.length > 0) {
+                        db.query(
+                          "INSERT INTO `nutrition_detail`(`prod_id`, `nutrition_name`, `nutrition_value`) VALUES ? ",
+                          [nutritionInsertData],
+                          (err, nResult) => {
+                            if (err) {
+                              helper.ThrowHtmlError(err, res);
+                              return;
+                            }
+
+                            if (nResult) {
+                              helper.Dlog(" nutritionInsert succes");
+                            } else {
+                              // res.json({ "status": "0", "message": msg_fail })
+                              helper.Dlog(" nutritionInsert fail");
+                            }
+                          }
+                        );
+                      }
+
+                      var imageInsertArr = [];
+
+                      imageNamePathArr.forEach((imagePath) => {
+                        imageInsertArr.push([result.insertId, imagePath]);
+                      });
+
                       db.query(
-                        "INSERT INTO `nutrition_detail`(`prod_id`, `nutrition_name`, `nutrition_value`) VALUES ? ",
-                        [nutritionInsertData],
-                        (err, nResult) => {
+                        "INSERT INTO `image_detail`(`prod_id`, `image`) VALUES ? ",
+                        [imageInsertArr],
+                        (err, iResult) => {
                           if (err) {
                             helper.ThrowHtmlError(err, res);
                             return;
                           }
 
-                          if (nResult) {
-                            helper.Dlog(" nutritionInsert succes");
+                          if (iResult) {
+                            helper.Dlog(" imageInsertArr succes");
                           } else {
-                            // res.json({ "status": "0", "message": msg_fail })
-                            helper.Dlog(" nutritionInsert fail");
+                            helper.Dlog(" imageInsertArr fail");
                           }
                         }
                       );
+
+                      res.json({
+                        status: "1",
+                        message: msg_product_added,
+                      });
+                    } else {
+                      res.json({ status: "0", message: msg_fail });
                     }
-
-                    var imageInsertArr = [];
-
-                    imageNamePathArr.forEach((imagePath) => {
-                      imageInsertArr.push([result.insertId, imagePath]);
-                    });
-
-                    db.query(
-                      "INSERT INTO `image_detail`(`prod_id`, `image`) VALUES ? ",
-                      [imageInsertArr],
-                      (err, iResult) => {
-                        if (err) {
-                          helper.ThrowHtmlError(err, res);
-                          return;
-                        }
-
-                        if (iResult) {
-                          helper.Dlog(" imageInsertArr succes");
-                        } else {
-                          helper.Dlog(" imageInsertArr fail");
-                        }
-                      }
-                    );
-
-                    res.json({
-                      status: "1",
-                      message: msg_product_added,
-                    });
-                  } else {
-                    res.json({ status: "0", message: msg_fail });
                   }
-                }
-              );
+                );
+              });
             });
           }
         );

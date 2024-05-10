@@ -9,7 +9,7 @@ var db = require("./../helpers/db_helpers");
 
 module.exports = {
   ImagePath: () => {
-    return "http://172.16.31.11:3001/img/";
+    return "http://192.168.50.79:3001/img/";
   },
 
   ThrowHtmlError: (err, res) => {
